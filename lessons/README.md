@@ -4,12 +4,14 @@
 станом. Тут лежать файли, які ви копіюєте туди по мірі просування курсу.
 
 ```bash
-cp lessons/09-flux/*.tf cluster/
+cp lessons/09-flux/*.tf cluster/                 # заняття 9
+cp -r lessons/10-traffic-secrets/. cluster/      # заняття 10: разом із текою policies/
 ```
 
 | Тека | Коли | Що додає |
 |---|---|---|
 | `09-flux/` | заняття 9 | провайдер helm, Flux і синхронізацію застосунку з git |
+| `10-traffic-secrets/` | заняття 10 | ролі й Pod Identity для LBC та ESO, синхронізацію `infra-sync`; **`flux.tf` замінює файл із заняття 9** |
 | `extra-metrics-server/` | за бажанням, після 09 | metrics-server для `kubectl top` |
 
 ## Чому файли копіюються, а не лежать у cluster/ з початку
@@ -25,3 +27,10 @@ cp lessons/09-flux/*.tf cluster/
 terraform apply -target=module.eks    # спершу сам кластер
 terraform apply                       # потім усе інше
 ```
+
+## Перед destroy — прибрати балансувальники
+
+Балансувальники NLB і їхні security groups створює AWS Load Balancer Controller,
+а не Terraform. Якщо в кластері лишився хоча б один `Service` типу
+`LoadBalancer`, `terraform destroy` упреться у VPC. Спершу приберіть такі
+сервіси через git і переконайтесь, що в EC2 → Load Balancers порожньо.

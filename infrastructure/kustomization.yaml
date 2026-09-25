@@ -1,5 +1,5 @@
 # Інфраструктура кластера: компоненти, які потрібні застосункам.
-# Flux застосовує цю теку через Kustomization infra-sync (flux/infrastructure.tf).
+# Flux застосовує цю теку через Kustomization infra-sync (cluster/flux-infrastructure.tf).
 #
 # Порядок у списку не важливий: Flux сам спочатку створює джерела,
 # а HelmRelease чекає, доки його HelmRepository стане Ready.

@@ -36,7 +36,7 @@ spec:
     crds: CreateReplace
 
   values:
-    # ${...} підставляє Flux із postBuild.substitute (flux/infrastructure.tf).
+    # ${...} підставляє Flux із postBuild.substitute (cluster/flux-infrastructure.tf).
     # Контролер може визначити VPC і регіон сам через метадані вузла,
     # але явні значення прибирають цілий клас помилок на старті.
     clusterName: ${CLUSTER_NAME}

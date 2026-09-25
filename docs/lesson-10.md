@@ -3,12 +3,15 @@
 Сьогодні до застосунку вперше можна дістатися з інтернету без `port-forward`,
 а секрети приходять у кластер з AWS, а не з git.
 
+Файли Terraform заняття лежать у `lessons/10-traffic-secrets/` і, як на
+занятті 9, копіюються в `cluster/`. Воркспейс той самий, один на весь курс.
+
 | Компонент | Хто ставить | Що робить |
 |---|---|---|
-| Ролі IAM і асоціації Pod Identity | Terraform, `cluster/platform-iam.tf` | Дають подам компонентів доступ до AWS без ключів |
+| Ролі IAM і асоціації Pod Identity | Terraform, `platform-iam.tf` | Дають подам компонентів доступ до AWS без ключів |
 | AWS Load Balancer Controller | Flux, `infrastructure/` | Створює NLB для `Service` типу `LoadBalancer` |
 | External Secrets Operator | Flux, `infrastructure/` | Робить із параметрів Parameter Store звичайні `Secret` |
-| Синхронізація `infra-sync` | Terraform, `flux/infrastructure.tf` | Каже Flux застосовувати теку `infrastructure/` |
+| Синхронізація `infra-sync` | Terraform, `flux-infrastructure.tf` | Каже Flux застосовувати теку `infrastructure/` |
 
 ---
 
@@ -25,22 +28,14 @@
 git pull
 ```
 
-Перевірка: у репозиторії з'явились теки `infrastructure/` і `docs/`, а в
-`cluster/` — файл `platform-iam.tf`.
+Перевірка: у репозиторії з'явились теки `lessons/10-traffic-secrets/`,
+`infrastructure/` і `docs/`.
 
 ---
 
-## 1. Ролі в AWS і вузол
+## 1. Підняти вузол
 
-```bash
-cd cluster
-terraform apply
-```
-
-План покаже **сім нових ресурсів** і жодної зміни: дві ролі, політику, її
-прив'язку, вбудовану політику й дві асоціації Pod Identity.
-
-Вузол піднімаємо командою AWS CLI (у CloudShell):
+У **CloudShell**:
 
 ```bash
 NG=$(aws eks list-nodegroups --cluster-name <prefix>-eks \
@@ -55,14 +50,6 @@ aws eks update-nodegroup-config --cluster-name <prefix>-eks \
 > кількість вузлів насправді не змінює. Піднімаємо й опускаємо вузли командою вище.
 
 Вузол піднімається дві-три хвилини. Поки йде — наступний крок.
-
-Перевірка:
-
-```bash
-aws eks list-pod-identity-associations --cluster-name <prefix>-eks \
-  --query 'associations[].serviceAccount' --output text
-# ebs-csi-controller-sa   aws-load-balancer-controller   external-secrets
-```
 
 ---
 
@@ -86,17 +73,33 @@ aws ssm put-parameter --name /shop/db-password \
 
 ---
 
-## 3. Інфраструктура через Flux
+## 3. Файли заняття в cluster/ і один apply
 
 Дочекайтесь, поки вузол у стані `Ready` (`kubectl get nodes`), тоді:
 
 ```bash
-cd ../flux
+cp -r lessons/10-traffic-secrets/. cluster/     # -r: разом із текою policies/
+cd cluster
 terraform apply
 ```
 
-План: **один новий** `helm_release.infra_sync` і **зміна** `helm_release.flux_sync`
-(додалось `dependsOn`).
+| Файл | Що додає |
+|---|---|
+| `platform-iam.tf` | дві ролі, політику LBC і її прив'язку, вбудовану політику ESO, дві асоціації Pod Identity |
+| `policies/` | офіційну політику контролера v3.5.0 — через неї копіюємо з `-r` |
+| `flux-infrastructure.tf` | синхронізацію `infra-sync` для теки `infrastructure/` |
+| `flux.tf` | **замінює** файл із заняття 9: у `shop-sync` додалось `dependsOn: infra-sync` |
+
+План: **8 to add, 1 to change**. Інше число — найчастіше скопійовано без `-r`
+або не зроблено `git pull`.
+
+Перевірка асоціацій:
+
+```bash
+aws eks list-pod-identity-associations --cluster-name <prefix>-eks \
+  --query 'associations[].serviceAccount' --output text
+# ebs-csi-controller-sa   aws-load-balancer-controller   external-secrets
+```
 
 Спостерігайте, як Flux ставить компоненти:
 

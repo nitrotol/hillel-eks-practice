@@ -1,11 +1,11 @@
 # ---------------------------------------------------------------------------
 # Заняття 10. Друга синхронізація Flux — для інфраструктури кластера.
 #
-# Тека infrastructure/ у репозиторії описує компоненти, які потрібні
+# Тека infrastructure/ у корені репозиторію описує компоненти, які потрібні
 # застосункам: контролер балансувальників і External Secrets Operator.
 # Flux ставить їх так само, як застосунок: коміт у git -> зміна в кластері.
 #
-# Чому окрема синхронізація, а не просто ще одна тека в apps/shop:
+# Чому окрема синхронізація, а не ще одна тека в apps/shop:
 #   1) інфраструктура має бути готова РАНІШЕ за застосунок (dependsOn у flux.tf);
 #   2) тут потрібні значення, яких немає в git: ім'я кластера, VPC, регіон.
 #
@@ -20,7 +20,13 @@ resource "helm_release" "infra_sync" {
   version    = "1.15.1"
   namespace  = "flux-system"
 
-  depends_on = [helm_release.flux]
+  # Асоціації Pod Identity мають існувати ДО того, як Flux запустить поди
+  # контролерів: под отримує облікові дані лише на старті.
+  depends_on = [
+    helm_release.flux,
+    aws_eks_pod_identity_association.lbc,
+    aws_eks_pod_identity_association.eso,
+  ]
 
   values = [yamlencode({
     gitRepository = {
@@ -53,8 +59,8 @@ resource "helm_release" "infra_sync" {
         # і вам не треба нічого вписувати руками.
         postBuild = {
           substitute = {
-            CLUSTER_NAME = var.cluster_name
-            VPC_ID       = data.aws_eks_cluster.this.vpc_config[0].vpc_id
+            CLUSTER_NAME = module.eks.cluster_name
+            VPC_ID       = module.vpc.vpc_id
             AWS_REGION   = var.region
           }
         }
