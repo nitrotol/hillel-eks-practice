@@ -11,9 +11,11 @@
 ## Що тут лежить
 
 ```
-cluster/     Уся конфігурація Terraform: один воркспейс, один стан.
-lessons/     Файли, які ви копіюєте в cluster/ по мірі просування курсу.
-apps/shop/   Маніфести застосунку, які Flux розгортає в кластер.
+cluster/          Уся конфігурація Terraform: один воркспейс, один стан.
+lessons/          Файли, які ви копіюєте в cluster/ по мірі просування курсу.
+apps/shop/        Маніфести застосунку, які Flux розгортає в кластер.
+infrastructure/   Компоненти кластера, які ставить Flux (з заняття 10).
+docs/             Покрокові інструкції занять.
 ```
 
 **Одна конфігурація, один воркспейс.** Нові можливості додаються копіюванням
@@ -129,6 +131,17 @@ kubectl port-forward -n shop svc/web 8080:80
    за хвилину подивіться `kubectl get pods -n shop`. Ви нічого не застосовували —
    кластер сам підтягнув зміну.
 
+### 6. Трафік і секрети (заняття 10)
+
+```bash
+cp -r lessons/10-traffic-secrets/. cluster/    # -r: разом із текою policies/
+cd cluster
+terraform apply
+```
+
+Далі — практики з `docs/lesson-10.md`: NLB через AWS Load Balancer Controller
+і секрети з Parameter Store через External Secrets Operator.
+
 ---
 
 ## Розрахунок ресурсів
@@ -217,10 +230,25 @@ kubectl describe node <ім'я-вузла> | grep -A8 "Allocated resources"
 ## Режим життя кластера
 
 ```bash
-terraform apply -var node_desired_size=0     # наприкінці заняття
-terraform apply -var node_desired_size=1     # на початку наступного, ~3 хв
-terraform destroy                            # після останнього заняття блоку
+NG=$(aws eks list-nodegroups --cluster-name <prefix>-eks --query 'nodegroups[0]' --output text)
+
+aws eks update-nodegroup-config --cluster-name <prefix>-eks \
+  --nodegroup-name $NG --scaling-config desiredSize=0     # наприкінці заняття
+aws eks update-nodegroup-config --cluster-name <prefix>-eks \
+  --nodegroup-name $NG --scaling-config desiredSize=1     # на початку наступного, ~3 хв
+
+terraform destroy                                         # після останнього заняття блоку
 ```
+
+**Чому не `terraform apply -var node_desired_size=…`.** Модуль EKS тримає
+`desired_size` в `ignore_changes`, щоб Terraform не відкочував рішення
+автомасштабувальника. Змінна `node_desired_size` задає лише кількість вузлів
+при створенні групи, пізніші її зміни план просто не покаже. Ті самі команди
+виводить `terraform output node_scale_commands`.
+
+**Перед `destroy` приберіть усі сервіси типу `LoadBalancer`** (з заняття 10 —
+закоментуйте `web-public.yaml`). Балансувальники й їхні security groups створює
+контролер, а не Terraform, і `destroy` упреться у VPC.
 
 **Нуль вузлів не означає порожній кластер.** Об'єкти Kubernetes зберігаються
 у сховищі контрольного рівня, тому Deployment, Service і ConfigMap лишаються
@@ -228,7 +256,8 @@ terraform destroy                            # після останнього �
 
 **Нуль вузлів не означає нульовий рахунок.** Балансувальники від сервісів типу
 `LoadBalancer` і томи EBS — ресурси AWS, вони тарифікуються незалежно від вузлів.
-Саме тому в `apps/shop` сервіси типу `ClusterIP`.
+Саме тому публічний вхід `web-public` вмикається лише на час заняття, а решта
+сервісів у `apps/shop` — типу `ClusterIP`.
 
 ### Скільки це коштує
 
@@ -254,8 +283,8 @@ plan, квота процесорів менша за 2 (квоти для spot 
 spot недоступний на вашому акаунті — тоді `node_capacity_type = "ON_DEMAND"`.
 
 **Вузол показує `pods: 29` після ввімкнення prefix delegation.** Вузол був
-створений раніше. Перестворіть групу вузлів: опустіть `node_desired_size` у 0,
-застосуйте, потім поверніть 1.
+створений раніше. Перестворіть вузол: опустіть групу в 0 і поверніть 1
+командами з розділу «Режим життя кластера».
 
 **Flux не бачить репозиторію.** Форк приватний — зробіть його публічним. Або
 гілка не `main`: чарт `flux2-sync` за замовчуванням дивиться в `master`.

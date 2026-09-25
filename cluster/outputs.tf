@@ -33,7 +33,11 @@ output "private_subnet_ids" {
   value       = module.vpc.private_subnets
 }
 
-output "node_desired_size" {
-  description = "Скільки вузлів зараз замовлено. Між заняттями має бути 0."
-  value       = var.node_desired_size
+output "node_scale_commands" {
+  description = "Як піднімати й опускати вузли. Terraform цього не робить: модуль ігнорує зміни desired_size."
+  value       = <<-EOT
+    NG=$(aws eks list-nodegroups --cluster-name ${module.eks.cluster_name} --query 'nodegroups[0]' --output text)
+    aws eks update-nodegroup-config --cluster-name ${module.eks.cluster_name} --nodegroup-name $NG --scaling-config desiredSize=1
+    aws eks update-nodegroup-config --cluster-name ${module.eks.cluster_name} --nodegroup-name $NG --scaling-config desiredSize=0
+  EOT
 }
