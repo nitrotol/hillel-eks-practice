@@ -19,6 +19,7 @@ charts/shop/      Власний Helm-чарт застосунку (з заня
 app/              Dockerfile образу застосунку (з заняття 12).
 .github/          Пайплайн GitHub Actions: образ і чарт у ECR (з заняття 12).
 lessons/13-logs/  Локальний стенд для логів: Docker Compose, без AWS (заняття 13).
+lessons/14-metrics/ Локальний стенд для метрик і алертів: Docker Compose, без AWS (заняття 14).
 docs/             Покрокові інструкції занять.
 ```
 
@@ -182,6 +183,19 @@ cd lessons/13-logs && docker compose up -d
 ```
 
 Усі кроки — `docs/lesson-13.md`.
+
+### 10. Метрики й алерти (заняття 14, домашнє завдання, необов'язкове)
+
+Terraform тут не змінюється. Метрики, які кластер віддає вже зараз
+(`kubectl get --raw /metrics`), і локальний стенд «застосунок → збір метрик →
+запити й алерти» у Docker Compose:
+
+```bash
+cd lessons/14-metrics && docker compose up -d
+# http://localhost:8428/vmui
+```
+
+Усі кроки — `docs/lesson-14.md`.
 
 ---
 

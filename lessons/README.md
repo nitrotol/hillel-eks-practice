@@ -15,6 +15,7 @@ cp lessons/12-cicd/*.tf cluster/                 # заняття 12 (домаш
 | `10-traffic-secrets/` | заняття 10 | ролі й Pod Identity для LBC та ESO, синхронізацію `infra-sync`; **`flux.tf` замінює файл із заняття 9** |
 | `12-cicd/` | заняття 12, домашнє завдання | реєстри ECR, роль для GitHub Actions через OIDC, доступ Flux до ECR, синхронізацію `release-sync`; потребує файлів занять 9 і 10 |
 | `13-logs/` | заняття 13, домашнє завдання | локальний стенд Docker Compose для логів; **у `cluster/` нічого не копіюється** — запускається на місці: `docker compose up -d` |
+| `14-metrics/` | заняття 14, домашнє завдання | локальний стенд Docker Compose для метрик і алертів; **у `cluster/` нічого не копіюється** — запускається на місці: `docker compose up -d` |
 | `extra-metrics-server/` | за бажанням, після 09 | metrics-server для `kubectl top` |
 
 ## Чому файли копіюються, а не лежать у cluster/ з початку

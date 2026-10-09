@@ -1,0 +1,78 @@
+# ---------------------------------------------------------------------------
+# Заняття 14. Локальний стенд: застосунок -> збір метрик -> запити й алерти.
+#
+#   shop (/metrics)  <--pull кожні 10 с--  victoriametrics  <--запити--  vmalert
+#     ^                                         |                     (правила алертів)
+#   loadgen                         http://localhost:8428/vmui
+#
+# Запуск:     docker compose up -d
+# Зупинка:    docker compose down -v      (-v видаляє й томи з даними)
+#
+# AWS і кластер для цього стенда не потрібні.
+# ---------------------------------------------------------------------------
+name: shop-metrics
+
+services:
+  # Застосунок, який сам віддає метрики на /metrics (shop/app.py).
+  shop:
+    image: python:3.13-alpine
+    command: ["python", "/app/app.py"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./shop/app.py:/app/app.py:ro
+
+  # Навантаження: кілька запитів щопівсекунди, серед них — невдалі.
+  # $$ — це звичайний $ для оболонки: так Compose не чіпає змінні сам.
+  loadgen:
+    image: python:3.13-alpine
+    depends_on:
+      - shop
+    command:
+      - sh
+      - -c
+      - |
+        i=0
+        while true; do
+          i=$$((i+1))
+          wget -q -O /dev/null http://shop:8000/
+          wget -q -O /dev/null http://shop:8000/api/items
+          wget -q -O /dev/null http://shop:8000/api/pay 2>/dev/null
+          wget -q -O /dev/null http://shop:8000/api/pay 2>/dev/null
+          [ $$((i % 5)) -eq 0 ] && wget -q -O /dev/null http://shop:8000/missing 2>/dev/null
+          sleep 0.5
+        done
+
+  # Збір і зберігання метрик, мова запитів, вебінтерфейс.
+  # Сумісна з Prometheus: той самий формат метрик, конфігурації й запитів.
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.153.0
+    ports:
+      - "8428:8428"
+    command:
+      - "-storageDataPath=/vmdata"
+      - "-retentionPeriod=7d"                                 # зберігати тиждень
+      - "-promscrape.config=/etc/victoriametrics/scrape.yml"  # що збирати
+      - "-vmalert.proxyURL=http://vmalert:8880"               # вкладка Alerting у vmui
+    volumes:
+      - ./victoriametrics/scrape.yml:/etc/victoriametrics/scrape.yml:ro
+      - vmdata:/vmdata
+
+  # Алерти: щоп'ятнадцять секунд виконує запити з правил і вирішує,
+  # чи спрацював алерт. Сповіщення нікуди не надсилає (-notifier.blackhole):
+  # у справжній системі тут була б адреса Alertmanager.
+  vmalert:
+    image: victoriametrics/vmalert:v1.153.0
+    depends_on:
+      - victoriametrics
+    command:
+      - "-rule=/etc/vmalert/alerts.yml"
+      - "-datasource.url=http://victoriametrics:8428"
+      - "-remoteWrite.url=http://victoriametrics:8428"   # зберігати стан алертів як метрику ALERTS
+      - "-notifier.blackhole"
+      - "-evaluationInterval=15s"
+    volumes:
+      - ./vmalert/alerts.yml:/etc/vmalert/alerts.yml:ro
+
+volumes:
+  vmdata:     # дані VictoriaMetrics

@@ -1,0 +1,24 @@
+# ---------------------------------------------------------------------------
+# Заняття 14. Що і як часто збирати.
+#
+# Формат той самий, що в prometheus.yml: цей файл без змін зрозуміє і
+# Prometheus. VictoriaMetrics сама ходить по адресах із переліку й забирає
+# /metrics — це модель pull.
+# ---------------------------------------------------------------------------
+global:
+  scrape_interval: 10s     # як часто збирати (у Prometheus за замовчуванням — 1 хв)
+
+scrape_configs:
+  # Наш застосунок.
+  - job_name: shop
+    static_configs:
+      - targets: ["shop:8000"]
+
+  # Самі інструменти моніторингу теж віддають метрики про себе.
+  - job_name: victoriametrics
+    static_configs:
+      - targets: ["localhost:8428"]
+
+  - job_name: vmalert
+    static_configs:
+      - targets: ["vmalert:8880"]

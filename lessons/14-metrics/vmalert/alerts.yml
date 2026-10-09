@@ -1,0 +1,43 @@
+# ---------------------------------------------------------------------------
+# Заняття 14. Правила алертів.
+#
+# Формат — той самий, що в правилах Prometheus: файл без змін підійде і йому.
+# Кожне правило — запит. Поки запит повертає хоча б один ряд, умова виконана.
+#   for:  скільки часу умова має триматися, перш ніж алерт спрацює.
+#         До того він «pending» — так відсіюють короткі випадкові стрибки.
+# ---------------------------------------------------------------------------
+groups:
+  - name: shop
+    rules:
+      # 1. Сервіс узагалі не відповідає. Простий стан «живий / мертвий» —
+      #    саме так думають Nagios і Zabbix.
+      - alert: ShopDown
+        expr: up{job="shop"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "shop не відповідає"
+          description: "Збирач не може забрати /metrics з {{ $labels.instance }} понад 30 секунд."
+
+      # 2. Сервіс живий, але користувачі бачать помилки. Частка відповідей 5xx
+      #    за останню хвилину — це вже думка метриками, а не перевірками.
+      - alert: ShopHighErrorRate
+        expr: |
+          sum(rate(shop_http_requests_total{status=~"5.."}[1m]))
+            / sum(rate(shop_http_requests_total[1m])) > 0.05
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "shop: забагато помилок"
+          description: "Частка відповідей 5xx — {{ $value | humanizePercentage }} (поріг 5%)."
+
+      # 3. Завдання із зірочкою: повільні відповіді.
+      #    95% запитів мають укладатися в пів секунди. Розкоментуйте п'ять
+      #    рядків нижче й перезапустіть vmalert: docker compose restart vmalert
+      # - alert: ShopSlowRequests
+      #   expr: histogram_quantile(0.95, sum by (le) (rate(shop_http_request_duration_seconds_bucket[1m]))) > 0.5
+      #   for: 1m
+      #   labels:
+      #     severity: warning
