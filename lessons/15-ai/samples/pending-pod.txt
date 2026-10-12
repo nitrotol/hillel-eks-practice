@@ -1,0 +1,44 @@
+Name:             postgres-0
+Namespace:        shop
+Priority:         0
+Service Account:  default
+Node:             <none>
+Labels:           app=postgres
+                  apps.kubernetes.io/pod-index=0
+                  controller-revision-hash=postgres-6c9f7d8b54
+                  statefulset.kubernetes.io/pod-name=postgres-0
+Annotations:      <none>
+Status:           Pending
+IP:
+IPs:              <none>
+Controlled By:    StatefulSet/postgres
+Containers:
+  postgres:
+    Image:      postgres:18-alpine
+    Port:       5432/TCP
+    Limits:
+      memory:  512Mi
+    Requests:
+      cpu:     100m
+      memory:  256Mi
+    Environment:
+      POSTGRES_PASSWORD:  <set to the key 'DB_PASSWORD' in secret 'shop-config'>
+      POSTGRES_DB:        shop
+    Mounts:
+      /var/lib/postgresql from data (rw)
+Conditions:
+  Type           Status
+  PodScheduled   False
+Volumes:
+  data:
+    Type:       PersistentVolumeClaim (a reference to a PersistentVolumeClaim in the same namespace)
+    ClaimName:  data-postgres-0
+    ReadOnly:   false
+QoS Class:       Burstable
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type     Reason            Age                From               Message
+  ----     ------            ----               ----               -------
+  Warning  FailedScheduling  2m (x5 over 12m)   default-scheduler  0/1 nodes are available: 1 Insufficient memory. preemption: 0/1 nodes are available: 1 No preemption victims found for incoming pod.

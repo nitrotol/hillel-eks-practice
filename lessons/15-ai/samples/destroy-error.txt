@@ -1,0 +1,7 @@
+module.vpc.aws_internet_gateway.this[0]: Destroying... [id=igw-0a1b2c3d4e5f60718]
+module.vpc.aws_subnet.public[1]: Still destroying... [id=subnet-0c4d5e6f7a8b9c0d1, 19m50s elapsed]
+module.vpc.aws_subnet.public[0]: Still destroying... [id=subnet-0e9f8a7b6c5d4e3f2, 19m50s elapsed]
+
+Error: deleting EC2 Subnet (subnet-0c4d5e6f7a8b9c0d1): operation error EC2: DeleteSubnet, https response error StatusCode: 400, RequestID: 6f1d2c3b-4a59-4e8f-9d7c-1b2a3c4d5e6f, api error DependencyViolation: The subnet 'subnet-0c4d5e6f7a8b9c0d1' has dependencies and cannot be deleted.
+
+Error: deleting EC2 Internet Gateway (igw-0a1b2c3d4e5f60718): detaching EC2 Internet Gateway (igw-0a1b2c3d4e5f60718) from VPC (vpc-0123456789abcdef0): operation error EC2: DetachInternetGateway, https response error StatusCode: 400, RequestID: 0b9a8c7d-6e5f-4a3b-2c1d-0e9f8a7b6c5d, api error DependencyViolation: Network vpc-0123456789abcdef0 has some mapped public address(es). Please unmap those public address(es) before detaching the gateway.
